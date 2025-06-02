@@ -57,7 +57,7 @@
             "name": "ApiManagementService",
             "type": 2,
             "isRequired": false,
-            "query": "// Find APIM resources from both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated > ago(30d)\r\n    | project _ResourceId\r\n    | distinct _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated > ago(30d)\r\n    | where Category == \"GatewayLogs\" or ResourceProvider == \"MICROSOFT.APIMANAGEMENT\"\r\n    | project ResourceId\r\n    | distinct ResourceId\r\n    | extend _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| distinct _ResourceId\r\n| project value = _ResourceId, label = _ResourceId, selected = false\r\n| sort by label asc",
+            "query": "// Find APIM resources from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where TimeGenerated > ago(30d)\r\n| project _ResourceId\r\n| distinct _ResourceId\r\n| project value = _ResourceId, label = _ResourceId, selected = false\r\n| sort by label asc",
             "crossComponentResources": [
               "{LogAnalyticsWorkspace}"
             ],
@@ -136,7 +136,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n    | project TimeGenerated, ResponseCode, DurationMs, BackendDurationMs, ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where Category == \"GatewayLogs\"\r\n    | where selectedResource == \"value::all\" or ResourceId == selectedResource\r\n    | project TimeGenerated, ResponseCode = toint(statusCode_d), DurationMs = totalTime_d, BackendDurationMs = backendTime_d, ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// API requests over time from resource-specific logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nApiManagementGatewayLogs\r\n| where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "API Requests Over Time",
         "timeContext": {
@@ -173,7 +173,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n    | project TimeGenerated, ResponseCode, DurationMs, BackendDurationMs, ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where Category == \"GatewayLogs\"\r\n    | where selectedResource == \"value::all\" or ResourceId == selectedResource\r\n    | project TimeGenerated, ResponseCode = toint(statusCode_d), DurationMs = totalTime_d, BackendDurationMs = backendTime_d, ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize \r\n    TotalRequests = count(),\r\n    SuccessfulRequests = countif(ResponseCode < 400),\r\n    ClientErrors = countif(ResponseCode >= 400 and ResponseCode < 500),\r\n    ServerErrors = countif(ResponseCode >= 500)\r\n| extend \r\n    SuccessRate = round((SuccessfulRequests * 100.0) / TotalRequests, 2),\r\n    ErrorRate = round(((ClientErrors + ServerErrors) * 100.0) / TotalRequests, 2)",
+        "query": "// Request summary from resource-specific logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nApiManagementGatewayLogs\r\n| where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n| summarize \r\n    TotalRequests = count(),\r\n    SuccessfulRequests = countif(ResponseCode < 400),\r\n    ClientErrors = countif(ResponseCode >= 400 and ResponseCode < 500),\r\n    ServerErrors = countif(ResponseCode >= 500)\r\n| extend \r\n    SuccessRate = round((SuccessfulRequests * 100.0) / TotalRequests, 2),\r\n    ErrorRate = round(((ClientErrors + ServerErrors) * 100.0) / TotalRequests, 2)",
         "size": 3,
         "title": "Request Summary",
         "timeContext": {
@@ -240,7 +240,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n    | where isnotnull(DurationMs)\r\n    | project TimeGenerated, DurationMs, BackendDurationMs, ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where Category == \"GatewayLogs\"\r\n    | where selectedResource == \"value::all\" or ResourceId == selectedResource\r\n    | where isnotnull(totalTime_d)\r\n    | project TimeGenerated, DurationMs = totalTime_d, BackendDurationMs = backendTime_d, ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize \r\n    AvgDuration = avg(DurationMs),\r\n    P50Duration = percentile(DurationMs, 50),\r\n    P95Duration = percentile(DurationMs, 95),\r\n    P99Duration = percentile(DurationMs, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Response time percentiles from resource-specific logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nApiManagementGatewayLogs\r\n| where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n| where isnotnull(DurationMs)\r\n| summarize \r\n    AvgDuration = avg(DurationMs),\r\n    P50Duration = percentile(DurationMs, 50),\r\n    P95Duration = percentile(DurationMs, 95),\r\n    P99Duration = percentile(DurationMs, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Request Duration Percentiles",
         "timeContext": {
@@ -280,7 +280,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n    | where isnotnull(BackendDurationMs)\r\n    | project TimeGenerated, BackendDurationMs, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where Category == \"GatewayLogs\"\r\n    | where selectedResource == \"value::all\" or ResourceId == selectedResource\r\n    | where isnotnull(backendTime_d)\r\n    | project TimeGenerated, BackendDurationMs = backendTime_d, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize \r\n    AvgBackendTime = avg(BackendDurationMs),\r\n    P95BackendTime = percentile(BackendDurationMs, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Backend response time from resource-specific logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nApiManagementGatewayLogs\r\n| where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n| where isnotnull(BackendDurationMs)\r\n| summarize \r\n    AvgBackendTime = avg(BackendDurationMs),\r\n    P95BackendTime = percentile(BackendDurationMs, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Backend Duration",
         "timeContext": {
@@ -325,7 +325,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n    | where ResponseCode >= 400\r\n    | project TimeGenerated, ResponseCode, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where Category == \"GatewayLogs\"\r\n    | where selectedResource == \"value::all\" or ResourceId == selectedResource\r\n    | where toint(statusCode_d) >= 400\r\n    | project TimeGenerated, ResponseCode = toint(statusCode_d), _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize ErrorCount = count() by ResponseCode, bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Error rates by response code from resource-specific logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nApiManagementGatewayLogs\r\n| where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ResponseCode, bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Error Rates by Response Code",
         "timeContext": {
@@ -368,7 +368,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n    | where ResponseCode >= 400\r\n    | project ApiId, ResponseCode, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where Category == \"GatewayLogs\"\r\n    | where selectedResource == \"value::all\" or ResourceId == selectedResource\r\n    | where toint(statusCode_d) >= 400\r\n    | project ApiId = apiId_s, ResponseCode = toint(statusCode_d), _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize ErrorCount = count() by ApiId, ResponseCode\r\n| top 10 by ErrorCount desc",
+        "query": "// Top APIs by error count from resource-specific logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nApiManagementGatewayLogs\r\n| where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ApiId, ResponseCode\r\n| top 10 by ErrorCount desc",
         "size": 0,
         "title": "Top APIs by Error Count",
         "timeContext": {
@@ -458,7 +458,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n    | project ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where Category == \"GatewayLogs\"\r\n    | where selectedResource == \"value::all\" or ResourceId == selectedResource\r\n    | project ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize RequestCount = count() by ApiId\r\n| top 10 by RequestCount desc",
+        "query": "// Top APIs by request volume from resource-specific logs\r\nlet selectedResource = \"{ApiManagementService}\";\r\nApiManagementGatewayLogs\r\n| where selectedResource == \"value::all\" or _ResourceId == selectedResource\r\n| summarize RequestCount = count() by ApiId\r\n| top 10 by RequestCount desc",
         "size": 0,
         "title": "Top APIs by Request Volume",
         "timeContext": {

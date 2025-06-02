@@ -43,17 +43,14 @@ The `azure-api-management-insights.json` workbook provides comprehensive monitor
 
 The workbook uses KQL queries targeting:
 - `ApiManagementGatewayLogs` - For request, response, and error data (resource-specific logs)
-- `AzureDiagnostics` - For legacy diagnostic logs with Category == "GatewayLogs"
 - `AzureMetrics` - For capacity and performance metrics
-
-The workbook automatically handles both resource-specific log tables and legacy Azure Diagnostics formats, ensuring compatibility with different APIM logging configurations.
 
 All visualizations are dynamically filtered by the selected APIM resource and time range, providing focused insights for the chosen service.
 
 ## Requirements
 
-- Azure API Management service with diagnostic logs enabled
-- Log Analytics workspace connected to your APIM service
+- Azure API Management service with resource-specific diagnostic logs enabled
+- Log Analytics workspace connected to your APIM service 
 - Appropriate permissions to read APIM metrics and logs
 
 ## Schema
