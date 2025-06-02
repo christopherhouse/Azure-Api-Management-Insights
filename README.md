@@ -7,8 +7,8 @@ This repository contains an Azure Workbook for monitoring and analyzing Azure AP
 The `azure-api-management-insights.json` workbook provides comprehensive monitoring capabilities for Azure API Management services including:
 
 ### Parameters
-- **Subscription Selection**: Choose the Azure subscription containing your APIM resources
-- **API Management Service Selection**: Pick the specific APIM service to monitor
+- **Log Analytics Workspace Selection**: Choose the Log Analytics workspace where your APIM diagnostic logs are stored
+- **API Management Service Selection**: Pick the specific APIM service to monitor (optional - leave blank to monitor all APIM services sending logs to the workspace)
 - **Time Range Selection**: Choose the time window for analysis (defaults to last hour)
 
 ### Visualizations
@@ -32,9 +32,21 @@ The `azure-api-management-insights.json` workbook provides comprehensive monitor
 ## Usage
 
 1. Import the workbook JSON file into Azure Monitor Workbooks
-2. Select your subscription and APIM service
-3. Choose your desired time range (defaults to last hour)
-4. View comprehensive metrics and logs for your APIM service
+2. Select your Log Analytics workspace where APIM diagnostic logs are stored
+3. Optionally select a specific APIM service (leave blank to monitor all services)
+4. Choose your desired time range (defaults to last hour)
+5. View comprehensive metrics and logs for your APIM service(s)
+
+## Technical Implementation
+
+The workbook uses KQL queries targeting:
+- `ApiManagementGatewayLogs` - For request, response, and error data (resource-specific logs)
+- `AzureDiagnostics` - For legacy diagnostic logs with Category == "GatewayLogs"
+- `AzureMetrics` - For capacity and performance metrics
+
+The workbook automatically handles both resource-specific log tables and legacy Azure Diagnostics formats, ensuring compatibility with different APIM logging configurations.
+
+All visualizations are dynamically filtered by the selected APIM resource and time range, providing focused insights for the chosen service.
 
 ## Requirements
 

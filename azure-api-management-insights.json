@@ -16,13 +16,9 @@
           {
             "id": "b8d2e87c-a7c3-4d4e-8f5b-1c2d3e4f5a6b",
             "version": "KqlParameterItem/1.0",
-            "name": "Subscription",
-            "type": 6,
+            "name": "LogAnalyticsWorkspace",
+            "type": 5,
             "isRequired": true,
-            "query": "Resources\r\n| where type =~ 'Microsoft.ApiManagement/service'\r\n| project subscriptionId\r\n| distinct subscriptionId\r\n| project value = subscriptionId, label = subscriptionId, selected = false",
-            "crossComponentResources": [
-              "value::all"
-            ],
             "typeSettings": {
               "additionalResourceOptions": [],
               "showDefault": false
@@ -30,30 +26,31 @@
             "timeContext": {
               "durationMs": 86400000
             },
-            "queryType": 1,
-            "resourceType": "microsoft.resourcegraph/resources",
-            "value": null
+            "label": "Log Analytics Workspace"
           },
           {
             "id": "d4e5f6a7-c8d9-5f6a-ab7c-3d4e5f6a7b8c",
             "version": "KqlParameterItem/1.0",
             "name": "ApiManagementService",
-            "type": 6,
-            "isRequired": true,
-            "query": "Resources\r\n| where type =~ 'Microsoft.ApiManagement/service'\r\n| where subscriptionId == '{Subscription}'\r\n| project value = id, label = name, selected = false",
+            "type": 2,
+            "isRequired": false,
+            "query": "// Find APIM resources from both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated > ago(30d)\r\n    | extend ResourceName = tostring(split(_ResourceId, \"/\")[-1])\r\n    | project ResourceName, _ResourceId\r\n    | distinct ResourceName, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated > ago(30d)\r\n    | where Category == \"GatewayLogs\" or ResourceProvider == \"MICROSOFT.APIMANAGEMENT\"\r\n    | extend ResourceName = tostring(split(ResourceId, \"/\")[-1])\r\n    | project ResourceName, ResourceId\r\n    | distinct ResourceName, ResourceId\r\n    | extend _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| distinct ResourceName, _ResourceId\r\n| project value = _ResourceId, label = ResourceName, selected = false\r\n| sort by label asc",
             "crossComponentResources": [
-              "value::all"
+              "{LogAnalyticsWorkspace}"
             ],
             "typeSettings": {
-              "additionalResourceOptions": [],
+              "additionalResourceOptions": [
+                "value::all"
+              ],
               "showDefault": false
             },
             "timeContext": {
               "durationMs": 86400000
             },
-            "queryType": 1,
-            "resourceType": "microsoft.resourcegraph/resources",
-            "value": null
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "label": "API Management Service (Optional - leave blank for all)",
+            "value": "value::all"
           },
           {
             "id": "e5f6a7b8-d9ea-6a7b-bc8d-4e5f6a7b8c9d",
@@ -116,7 +113,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "ApiManagementGatewayLogs\r\n| where TimeGenerated {TimeRange}\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated {TimeRange}\r\n    | where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n    | project TimeGenerated, ResponseCode, ResponseTime, BackendResponseTime, ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated {TimeRange}\r\n    | where Category == \"GatewayLogs\"\r\n    | where \"{ApiManagementService}\" == \"value::all\" or ResourceId in ({ApiManagementService})\r\n    | project TimeGenerated, ResponseCode = toint(responseCode_d), ResponseTime = responseTime_d, BackendResponseTime = backendResponseTime_d, ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "API Requests Over Time",
         "timeContext": {
@@ -124,9 +121,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "timechart",
         "chartSettings": {
@@ -153,7 +150,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "ApiManagementGatewayLogs\r\n| where TimeGenerated {TimeRange}\r\n| summarize \r\n    TotalRequests = count(),\r\n    SuccessfulRequests = countif(ResponseCode < 400),\r\n    ClientErrors = countif(ResponseCode >= 400 and ResponseCode < 500),\r\n    ServerErrors = countif(ResponseCode >= 500)\r\n| extend \r\n    SuccessRate = round((SuccessfulRequests * 100.0) / TotalRequests, 2),\r\n    ErrorRate = round(((ClientErrors + ServerErrors) * 100.0) / TotalRequests, 2)",
+        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated {TimeRange}\r\n    | where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n    | project TimeGenerated, ResponseCode, ResponseTime, BackendResponseTime, ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated {TimeRange}\r\n    | where Category == \"GatewayLogs\"\r\n    | where \"{ApiManagementService}\" == \"value::all\" or ResourceId in ({ApiManagementService})\r\n    | project TimeGenerated, ResponseCode = toint(responseCode_d), ResponseTime = responseTime_d, BackendResponseTime = backendResponseTime_d, ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize \r\n    TotalRequests = count(),\r\n    SuccessfulRequests = countif(ResponseCode < 400),\r\n    ClientErrors = countif(ResponseCode >= 400 and ResponseCode < 500),\r\n    ServerErrors = countif(ResponseCode >= 500)\r\n| extend \r\n    SuccessRate = round((SuccessfulRequests * 100.0) / TotalRequests, 2),\r\n    ErrorRate = round(((ClientErrors + ServerErrors) * 100.0) / TotalRequests, 2)",
         "size": 3,
         "title": "Request Summary",
         "timeContext": {
@@ -161,9 +158,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "tiles",
         "tileSettings": {
@@ -220,7 +217,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "ApiManagementGatewayLogs\r\n| where TimeGenerated {TimeRange}\r\n| where isnotnull(ResponseTime)\r\n| summarize \r\n    AvgResponseTime = avg(ResponseTime),\r\n    P50ResponseTime = percentile(ResponseTime, 50),\r\n    P95ResponseTime = percentile(ResponseTime, 95),\r\n    P99ResponseTime = percentile(ResponseTime, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated {TimeRange}\r\n    | where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n    | where isnotnull(ResponseTime)\r\n    | project TimeGenerated, ResponseTime, BackendResponseTime, ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated {TimeRange}\r\n    | where Category == \"GatewayLogs\"\r\n    | where \"{ApiManagementService}\" == \"value::all\" or ResourceId in ({ApiManagementService})\r\n    | where isnotnull(responseTime_d)\r\n    | project TimeGenerated, ResponseTime = responseTime_d, BackendResponseTime = backendResponseTime_d, ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize \r\n    AvgResponseTime = avg(ResponseTime),\r\n    P50ResponseTime = percentile(ResponseTime, 50),\r\n    P95ResponseTime = percentile(ResponseTime, 95),\r\n    P99ResponseTime = percentile(ResponseTime, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Response Time Percentiles",
         "timeContext": {
@@ -228,9 +225,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "timechart",
         "chartSettings": {
@@ -260,7 +257,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "ApiManagementGatewayLogs\r\n| where TimeGenerated {TimeRange}\r\n| where isnotnull(BackendResponseTime)\r\n| summarize \r\n    AvgBackendTime = avg(BackendResponseTime),\r\n    P95BackendTime = percentile(BackendResponseTime, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated {TimeRange}\r\n    | where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n    | where isnotnull(BackendResponseTime)\r\n    | project TimeGenerated, BackendResponseTime, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated {TimeRange}\r\n    | where Category == \"GatewayLogs\"\r\n    | where \"{ApiManagementService}\" == \"value::all\" or ResourceId in ({ApiManagementService})\r\n    | where isnotnull(backendResponseTime_d)\r\n    | project TimeGenerated, BackendResponseTime = backendResponseTime_d, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize \r\n    AvgBackendTime = avg(BackendResponseTime),\r\n    P95BackendTime = percentile(BackendResponseTime, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Backend Response Time",
         "timeContext": {
@@ -268,9 +265,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "timechart",
         "chartSettings": {
@@ -305,7 +302,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "ApiManagementGatewayLogs\r\n| where TimeGenerated {TimeRange}\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ResponseCode, bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated {TimeRange}\r\n    | where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n    | where ResponseCode >= 400\r\n    | project TimeGenerated, ResponseCode, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated {TimeRange}\r\n    | where Category == \"GatewayLogs\"\r\n    | where \"{ApiManagementService}\" == \"value::all\" or ResourceId in ({ApiManagementService})\r\n    | where toint(responseCode_d) >= 400\r\n    | project TimeGenerated, ResponseCode = toint(responseCode_d), _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize ErrorCount = count() by ResponseCode, bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Error Rates by Response Code",
         "timeContext": {
@@ -313,9 +310,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "timechart",
         "chartSettings": {
@@ -348,7 +345,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "ApiManagementGatewayLogs\r\n| where TimeGenerated {TimeRange}\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ApiId, ResponseCode\r\n| top 10 by ErrorCount desc",
+        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated {TimeRange}\r\n    | where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n    | where ResponseCode >= 400\r\n    | project ApiId, ResponseCode, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated {TimeRange}\r\n    | where Category == \"GatewayLogs\"\r\n    | where \"{ApiManagementService}\" == \"value::all\" or ResourceId in ({ApiManagementService})\r\n    | where toint(responseCode_d) >= 400\r\n    | project ApiId = apiId_s, ResponseCode = toint(responseCode_d), _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize ErrorCount = count() by ApiId, ResponseCode\r\n| top 10 by ErrorCount desc",
         "size": 0,
         "title": "Top APIs by Error Count",
         "timeContext": {
@@ -356,9 +353,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "table",
         "gridSettings": {
@@ -398,7 +395,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "AzureMetrics\r\n| where TimeGenerated {TimeRange}\r\n| where MetricName == \"Capacity\"\r\n| summarize AvgCapacity = avg(Average) by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "AzureMetrics\r\n| where TimeGenerated {TimeRange}\r\n| where MetricName == \"Capacity\"\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n| summarize AvgCapacity = avg(Average) by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "API Management Capacity Utilization",
         "timeContext": {
@@ -406,9 +403,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "timechart",
         "chartSettings": {
@@ -438,7 +435,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "ApiManagementGatewayLogs\r\n| where TimeGenerated {TimeRange}\r\n| summarize RequestCount = count() by ApiId\r\n| top 10 by RequestCount desc",
+        "query": "// Union both resource-specific and legacy diagnostic logs\r\nlet ResourceSpecificLogs = \r\n    ApiManagementGatewayLogs\r\n    | where TimeGenerated {TimeRange}\r\n    | where \"{ApiManagementService}\" == \"value::all\" or _ResourceId in ({ApiManagementService})\r\n    | project ApiId, _ResourceId;\r\nlet LegacyLogs = \r\n    AzureDiagnostics\r\n    | where TimeGenerated {TimeRange}\r\n    | where Category == \"GatewayLogs\"\r\n    | where \"{ApiManagementService}\" == \"value::all\" or ResourceId in ({ApiManagementService})\r\n    | project ApiId = apiId_s, _ResourceId = ResourceId;\r\nunion ResourceSpecificLogs, LegacyLogs\r\n| summarize RequestCount = count() by ApiId\r\n| top 10 by RequestCount desc",
         "size": 0,
         "title": "Top APIs by Request Volume",
         "timeContext": {
@@ -446,9 +443,9 @@
         },
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.apimanagement/service",
+        "resourceType": "microsoft.operationalinsights/workspaces",
         "crossComponentResources": [
-          "{ApiManagementService}"
+          "{LogAnalyticsWorkspace}"
         ],
         "visualization": "piechart",
         "chartSettings": {
