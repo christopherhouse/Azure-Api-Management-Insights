@@ -14,6 +14,22 @@
         "version": "KqlParameterItem/1.0",
         "parameters": [
           {
+            "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+            "version": "KqlParameterItem/1.0",
+            "name": "Subscription",
+            "type": 6,
+            "isRequired": true,
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "includeAll": false,
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "label": "Subscription"
+          },
+          {
             "id": "b8d2e87c-a7c3-4d4e-8f5b-1c2d3e4f5a6b",
             "version": "KqlParameterItem/1.0",
             "name": "LogAnalyticsWorkspace",
@@ -21,12 +37,26 @@
             "isRequired": true,
             "typeSettings": {
               "additionalResourceOptions": [],
-              "showDefault": false
+              "showDefault": false,
+              "componentIdOnly": true
             },
             "timeContext": {
               "durationMs": 86400000
             },
-            "label": "Log Analytics Workspace"
+            "label": "Log Analytics Workspace",
+            "defaultValue": "",
+            "criteriaData": [
+              {
+                "criteriaContext": {
+                  "leftOperand": "Subscription",
+                  "operator": "==",
+                  "rightValType": "param",
+                  "rightVal": "Subscription",
+                  "resultValType": "static",
+                  "resultVal": "Default"
+                }
+              }
+            ]
           },
           {
             "id": "d4e5f6a7-c8d9-5f6a-ab7c-3d4e5f6a7b8c",

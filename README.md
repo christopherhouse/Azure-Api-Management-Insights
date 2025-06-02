@@ -7,7 +7,8 @@ This repository contains an Azure Workbook for monitoring and analyzing Azure AP
 The `azure-api-management-insights.json` workbook provides comprehensive monitoring capabilities for Azure API Management services including:
 
 ### Parameters
-- **Log Analytics Workspace Selection**: Choose the Log Analytics workspace where your APIM diagnostic logs are stored
+- **Subscription Selection**: Choose your Azure subscription
+- **Log Analytics Workspace Selection**: Choose the Log Analytics workspace from the selected subscription where your APIM diagnostic logs are stored
 - **API Management Service Selection**: Pick the specific APIM service to monitor (optional - leave blank to monitor all APIM services sending logs to the workspace)
 - **Time Range Selection**: Choose the time window for analysis (defaults to last hour)
 
@@ -32,10 +33,11 @@ The `azure-api-management-insights.json` workbook provides comprehensive monitor
 ## Usage
 
 1. Import the workbook JSON file into Azure Monitor Workbooks
-2. Select your Log Analytics workspace where APIM diagnostic logs are stored
-3. Optionally select a specific APIM service (leave blank to monitor all services)
-4. Choose your desired time range (defaults to last hour)
-5. View comprehensive metrics and logs for your APIM service(s)
+2. Select your Azure subscription
+3. Select your Log Analytics workspace from the subscription where APIM diagnostic logs are stored
+4. Optionally select a specific APIM service (leave blank to monitor all services)
+5. Choose your desired time range (defaults to last hour)
+6. View comprehensive metrics and logs for your APIM service(s)
 
 ## Technical Implementation
 
