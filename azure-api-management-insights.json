@@ -19,6 +19,7 @@
             "name": "Subscription",
             "type": 6,
             "isRequired": true,
+            "multiSelect": false,
             "typeSettings": {
               "additionalResourceOptions": [],
               "includeAll": false,
@@ -36,10 +37,9 @@
             "type": 5,
             "isRequired": true,
             "typeSettings": {
+              "resourceTypeFilter": "microsoft.operationalinsights/workspaces",
               "additionalResourceOptions": [],
-              "showDefault": false,
-              "componentIdOnly": true,
-              "resourceTypeFilter": "microsoft.operationalinsights/workspaces"
+              "showDefault": false
             },
             "crossComponentResources": [
               "{Subscription}"
@@ -47,8 +47,7 @@
             "timeContext": {
               "durationMs": 86400000
             },
-            "label": "Log Analytics Workspace",
-            "defaultValue": ""
+            "label": "Log Analytics Workspace"
           },
           {
             "id": "d4e5f6a7-c8d9-5f6a-ab7c-3d4e5f6a7b8c",
