@@ -8,7 +8,6 @@ The `azure-api-management-insights.json` workbook provides comprehensive monitor
 
 ### Parameters
 - **Subscription Selection**: Choose the Azure subscription containing your APIM resources
-- **Resource Group Selection**: Select the resource group containing your APIM service
 - **API Management Service Selection**: Pick the specific APIM service to monitor
 - **Time Range Selection**: Choose the time window for analysis (defaults to last hour)
 
@@ -33,7 +32,7 @@ The `azure-api-management-insights.json` workbook provides comprehensive monitor
 ## Usage
 
 1. Import the workbook JSON file into Azure Monitor Workbooks
-2. Select your subscription, resource group, and APIM service
+2. Select your subscription and APIM service
 3. Choose your desired time range (defaults to last hour)
 4. View comprehensive metrics and logs for your APIM service
 
