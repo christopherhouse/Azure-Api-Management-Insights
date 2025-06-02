@@ -34,16 +34,18 @@
             "id": "b8d2e87c-a7c3-4d4e-8f5b-1c2d3e4f5a6b",
             "version": "KqlParameterItem/1.0",
             "name": "LogAnalyticsWorkspace",
-            "type": 5,
+            "type": 2,
             "isRequired": true,
-            "typeSettings": {
-              "resourceTypeFilter": "microsoft.operationalinsights/workspaces",
-              "additionalResourceOptions": [],
-              "showDefault": false
-            },
+            "query": "Resources\r\n| where type == 'microsoft.operationalinsights/workspaces'\r\n| where subscriptionId == '{Subscription:subscriptionId}'\r\n| project value = id, label = name, selected = false\r\n| sort by label asc",
             "crossComponentResources": [
               "{Subscription}"
             ],
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
             "timeContext": {
               "durationMs": 86400000
             },
