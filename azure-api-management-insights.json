@@ -56,24 +56,22 @@
             "version": "KqlParameterItem/1.0",
             "name": "ApiManagementService",
             "type": 2,
-            "isRequired": false,
-            "query": "// Find APIM resources from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where TimeGenerated > ago(30d)\r\n| project _ResourceId\r\n| distinct _ResourceId\r\n| extend ResourceName = tostring(split(_ResourceId, '/')[-1])\r\n| project value = _ResourceId, label = ResourceName, selected = false\r\n| sort by label asc",
+            "isRequired": true,
+            "multiSelect": false,
+            "query": "Resources\r\n| where type == 'microsoft.apimanagement/service'\r\n| where subscriptionId == '{Subscription:subscriptionId}'\r\n| project value = id, label = name, selected = false\r\n| sort by label asc",
             "crossComponentResources": [
-              "{LogAnalyticsWorkspace}"
+              "{Subscription}"
             ],
             "typeSettings": {
-              "additionalResourceOptions": [
-                "value::all"
-              ],
+              "additionalResourceOptions": [],
               "showDefault": false
             },
             "timeContext": {
               "durationMs": 86400000
             },
-            "queryType": 0,
-            "resourceType": "microsoft.operationalinsights/workspaces",
-            "label": "API Management Service (Optional - leave blank for all)",
-            "value": "value::all"
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "label": "API Management Service"
           },
           {
             "id": "e5f6a7b8-d9ea-6a7b-bc8d-4e5f6a7b8c9d",
@@ -136,7 +134,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// API requests over time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// API requests over time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where _ResourceId == \"{ApiManagementService}\"\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m), ApiId\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "API Requests Over Time",
         "timeContext": {
@@ -153,7 +151,7 @@
           "yAxis": [
             "TotalRequests"
           ],
-          "group": null,
+          "group": "ApiId",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -174,7 +172,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Request summary from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize \r\n    TotalRequests = count(),\r\n    SuccessfulRequests = countif(ResponseCode < 400),\r\n    ClientErrors = countif(ResponseCode >= 400 and ResponseCode < 500),\r\n    ServerErrors = countif(ResponseCode >= 500)\r\n| extend \r\n    SuccessRate = round((SuccessfulRequests * 100.0) / TotalRequests, 2),\r\n    ErrorRate = round(((ClientErrors + ServerErrors) * 100.0) / TotalRequests, 2)",
+        "query": "// Request summary from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where _ResourceId == \"{ApiManagementService}\"\r\n| summarize \r\n    TotalRequests = count(),\r\n    SuccessfulRequests = countif(ResponseCode < 400),\r\n    ClientErrors = countif(ResponseCode >= 400 and ResponseCode < 500),\r\n    ServerErrors = countif(ResponseCode >= 500)\r\n| extend \r\n    SuccessRate = round((SuccessfulRequests * 100.0) / TotalRequests, 2),\r\n    ErrorRate = round(((ClientErrors + ServerErrors) * 100.0) / TotalRequests, 2)",
         "size": 3,
         "title": "Request Summary",
         "timeContext": {
@@ -241,7 +239,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Response time percentiles from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(TotalTime)\r\n| summarize \r\n    AvgDuration = avg(TotalTime),\r\n    P50Duration = percentile(TotalTime, 50),\r\n    P95Duration = percentile(TotalTime, 95),\r\n    P99Duration = percentile(TotalTime, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Response time percentiles from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(TotalTime)\r\n| summarize \r\n    AvgDuration = avg(TotalTime),\r\n    P50Duration = percentile(TotalTime, 50),\r\n    P95Duration = percentile(TotalTime, 95),\r\n    P99Duration = percentile(TotalTime, 99)\r\n    by bin(TimeGenerated, 5m), ApiId\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Request Duration Percentiles",
         "timeContext": {
@@ -261,7 +259,7 @@
             "P95Duration",
             "P99Duration"
           ],
-          "group": null,
+          "group": "ApiId",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -282,7 +280,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Backend response time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(BackendTime)\r\n| summarize \r\n    AvgBackendTime = avg(BackendTime),\r\n    P95BackendTime = percentile(BackendTime, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Backend response time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(BackendTime)\r\n| summarize \r\n    AvgBackendTime = avg(BackendTime),\r\n    P95BackendTime = percentile(BackendTime, 95)\r\n    by bin(TimeGenerated, 5m), ApiId\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Backend Duration",
         "timeContext": {
@@ -300,7 +298,7 @@
             "AvgBackendTime",
             "P95BackendTime"
           ],
-          "group": null,
+          "group": "ApiId",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -328,7 +326,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Error rates by response code from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ResponseCode, bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Error rates by response code from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ResponseCode, ApiId, bin(TimeGenerated, 5m)\r\n| extend ApiResponseCode = strcat(ApiId, \" - \", ResponseCode)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Error Rates by Response Code",
         "timeContext": {
@@ -344,14 +342,14 @@
         "chartSettings": {
           "seriesLabelSettings": [
             {
-              "seriesName": "ResponseCode",
-              "label": "Response Code"
+              "seriesName": "ApiResponseCode",
+              "label": "API - Response Code"
             }
           ],
           "yAxis": [
             "ErrorCount"
           ],
-          "group": "ResponseCode",
+          "group": "ApiResponseCode",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -372,7 +370,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Top APIs by error count from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ApiId, ResponseCode\r\n| top 10 by ErrorCount desc",
+        "query": "// Top APIs by error count from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ApiId, ResponseCode\r\n| top 10 by ErrorCount desc",
         "size": 0,
         "title": "Top APIs by Error Count",
         "timeContext": {
@@ -421,40 +419,33 @@
     {
       "type": 3,
       "content": {
-        "version": "KqlItem/1.0",
-        "query": "AzureMetrics\r\n| where MetricName == \"Capacity\"\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize AvgCapacity = avg(Average) by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "version": "MetricsItem/2.0",
         "size": 0,
-        "title": "API Management Capacity Utilization",
+        "chartType": 2,
+        "resourceType": "Microsoft.ApiManagement/service",
+        "metricScope": 0,
+        "resourceParameter": "ApiManagementService",
+        "resourceIds": [
+          "{ApiManagementService}"
+        ],
+        "timeContextFromParameter": "TimeRange",
         "timeContext": {
           "durationMs": 0
         },
-        "timeContextFromParameter": "TimeRange",
-        "queryType": 0,
-        "resourceType": "microsoft.operationalinsights/workspaces",
-        "crossComponentResources": [
-          "{LogAnalyticsWorkspace}"
-        ],
-        "visualization": "timechart",
-        "chartSettings": {
-          "yAxis": [
-            "AvgCapacity"
-          ],
-          "group": null,
-          "createOtherGroup": null,
-          "showLegend": true,
-          "yAxisAggregation": "Average",
-          "ySettings": {
-            "numberFormatSettings": {
-              "unit": 1,
-              "options": {
-                "style": "decimal",
-                "useGrouping": true,
-                "maximumFractionDigits": 2
-              }
+        "metrics": [
+          {
+            "namespace": "Microsoft.ApiManagement/service",
+            "metric": "Microsoft.ApiManagement/service-Capacity",
+            "aggregation": {
+              "text": "Average",
+              "value": "avg"
             },
-            "min": 0,
-            "max": 100
+            "splitBy": "Location"
           }
+        ],
+        "title": "API Management Capacity Utilization by Location",
+        "gridSettings": {
+          "rowLimit": 10000
         }
       },
       "name": "CapacityUtilization"
@@ -463,7 +454,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Top APIs by request volume from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize RequestCount = count() by ApiId\r\n| top 10 by RequestCount desc",
+        "query": "// Top APIs by request volume from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where _ResourceId == \"{ApiManagementService}\"\r\n| summarize RequestCount = count() by ApiId\r\n| top 10 by RequestCount desc",
         "size": 0,
         "title": "Top APIs by Request Volume",
         "timeContext": {
