@@ -57,9 +57,9 @@
             "name": "ApiManagementService",
             "type": 2,
             "isRequired": true,
-            "query": "// Find APIM resources from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where TimeGenerated > ago(30d)\r\n| project _ResourceId\r\n| distinct _ResourceId\r\n| extend ResourceName = tostring(split(_ResourceId, '/')[-1])\r\n| project value = _ResourceId, label = ResourceName, selected = false\r\n| sort by label asc",
+            "query": "Resources\r\n| where type == 'microsoft.apimanagement/service'\r\n| where subscriptionId == '{Subscription:subscriptionId}'\r\n| project value = id, label = name, selected = false\r\n| sort by label asc",
             "crossComponentResources": [
-              "{LogAnalyticsWorkspace}"
+              "{Subscription}"
             ],
             "typeSettings": {
               "additionalResourceOptions": [],
@@ -68,8 +68,8 @@
             "timeContext": {
               "durationMs": 86400000
             },
-            "queryType": 0,
-            "resourceType": "microsoft.operationalinsights/workspaces",
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
             "label": "API Management Service"
           },
           {
