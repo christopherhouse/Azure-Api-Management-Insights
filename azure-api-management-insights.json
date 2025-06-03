@@ -156,6 +156,7 @@
           "group": null,
           "createOtherGroup": null,
           "showLegend": true,
+          "yAxisAggregation": "Average",
           "ySettings": {
             "numberFormatSettings": {
               "unit": 17,
@@ -263,6 +264,7 @@
           "group": null,
           "createOtherGroup": null,
           "showLegend": true,
+          "yAxisAggregation": "Average",
           "ySettings": {
             "numberFormatSettings": {
               "unit": 23,
@@ -301,6 +303,7 @@
           "group": null,
           "createOtherGroup": null,
           "showLegend": true,
+          "yAxisAggregation": "Average",
           "ySettings": {
             "numberFormatSettings": {
               "unit": 23,
@@ -351,6 +354,7 @@
           "group": "ResponseCode",
           "createOtherGroup": null,
           "showLegend": true,
+          "yAxisAggregation": "Average",
           "ySettings": {
             "numberFormatSettings": {
               "unit": 17,
@@ -438,6 +442,7 @@
           "group": null,
           "createOtherGroup": null,
           "showLegend": true,
+          "yAxisAggregation": "Average",
           "ySettings": {
             "numberFormatSettings": {
               "unit": 1,
