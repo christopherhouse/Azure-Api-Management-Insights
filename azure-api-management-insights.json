@@ -1,0 +1,493 @@
+{
+  "version": "Notebook/1.0",
+  "items": [
+    {
+      "type": 1,
+      "content": {
+        "json": "# Azure API Management Insights\n\nThis workbook provides comprehensive monitoring and insights for Azure API Management resources, including request metrics, performance data, and error analysis."
+      },
+      "name": "Header"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+            "version": "KqlParameterItem/1.0",
+            "name": "Subscription",
+            "type": 6,
+            "isRequired": true,
+            "multiSelect": false,
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "includeAll": false,
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "label": "Subscription"
+          },
+          {
+            "id": "b8d2e87c-a7c3-4d4e-8f5b-1c2d3e4f5a6b",
+            "version": "KqlParameterItem/1.0",
+            "name": "LogAnalyticsWorkspace",
+            "type": 2,
+            "isRequired": true,
+            "query": "Resources\r\n| where type == 'microsoft.operationalinsights/workspaces'\r\n| where subscriptionId == '{Subscription:subscriptionId}'\r\n| project value = id, label = name, selected = false\r\n| sort by label asc",
+            "crossComponentResources": [
+              "{Subscription}"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [],
+              "showDefault": false
+            },
+            "queryType": 1,
+            "resourceType": "microsoft.resourcegraph/resources",
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "label": "Log Analytics Workspace"
+          },
+          {
+            "id": "d4e5f6a7-c8d9-5f6a-ab7c-3d4e5f6a7b8c",
+            "version": "KqlParameterItem/1.0",
+            "name": "ApiManagementService",
+            "type": 2,
+            "isRequired": false,
+            "query": "// Find APIM resources from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where TimeGenerated > ago(30d)\r\n| project _ResourceId\r\n| distinct _ResourceId\r\n| extend ResourceName = tostring(split(_ResourceId, '/')[-1])\r\n| project value = _ResourceId, label = ResourceName, selected = false\r\n| sort by label asc",
+            "crossComponentResources": [
+              "{LogAnalyticsWorkspace}"
+            ],
+            "typeSettings": {
+              "additionalResourceOptions": [
+                "value::all"
+              ],
+              "showDefault": false
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "label": "API Management Service (Optional - leave blank for all)",
+            "value": "value::all"
+          },
+          {
+            "id": "e5f6a7b8-d9ea-6a7b-bc8d-4e5f6a7b8c9d",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 3600000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {
+                  "durationMs": 1800000
+                },
+                {
+                  "durationMs": 3600000
+                },
+                {
+                  "durationMs": 14400000
+                },
+                {
+                  "durationMs": 43200000
+                },
+                {
+                  "durationMs": 86400000
+                },
+                {
+                  "durationMs": 172800000
+                },
+                {
+                  "durationMs": 259200000
+                },
+                {
+                  "durationMs": 604800000
+                }
+              ],
+              "allowCustom": true
+            },
+            "timeContext": {
+              "durationMs": 86400000
+            },
+            "label": "Time Range"
+          }
+        ],
+        "style": "pills",
+        "queryType": 1,
+        "resourceType": "microsoft.resourcegraph/resources"
+      },
+      "name": "Parameters"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Request Overview"
+      },
+      "name": "RequestOverviewHeader"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// API requests over time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "size": 0,
+        "title": "API Requests Over Time",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "timechart",
+        "chartSettings": {
+          "yAxis": [
+            "TotalRequests"
+          ],
+          "group": null,
+          "createOtherGroup": null,
+          "showLegend": true,
+          "yAxisAggregation": "Average",
+          "ySettings": {
+            "numberFormatSettings": {
+              "unit": 17,
+              "options": {
+                "style": "decimal",
+                "useGrouping": true
+              }
+            }
+          }
+        }
+      },
+      "name": "RequestsOverTime"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Request summary from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize \r\n    TotalRequests = count(),\r\n    SuccessfulRequests = countif(ResponseCode < 400),\r\n    ClientErrors = countif(ResponseCode >= 400 and ResponseCode < 500),\r\n    ServerErrors = countif(ResponseCode >= 500)\r\n| extend \r\n    SuccessRate = round((SuccessfulRequests * 100.0) / TotalRequests, 2),\r\n    ErrorRate = round(((ClientErrors + ServerErrors) * 100.0) / TotalRequests, 2)",
+        "size": 3,
+        "title": "Request Summary",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "TotalRequests",
+            "formatter": 1,
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "style": "decimal",
+                "useGrouping": true
+              }
+            }
+          },
+          "leftContent": {
+            "columnMatch": "TotalRequests",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "auto"
+            },
+            "numberFormat": {
+              "unit": 17,
+              "options": {
+                "maximumSignificantDigits": 3,
+                "useGrouping": true
+              }
+            }
+          },
+          "secondaryContent": {
+            "columnMatch": "SuccessRate",
+            "formatter": 1,
+            "numberFormat": {
+              "unit": 1,
+              "options": {
+                "style": "decimal",
+                "useGrouping": false,
+                "maximumFractionDigits": 2
+              }
+            }
+          },
+          "showBorder": false
+        }
+      },
+      "name": "RequestSummary"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Performance Metrics"
+      },
+      "name": "PerformanceHeader"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Response time percentiles from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(TotalTime)\r\n| summarize \r\n    AvgDuration = avg(TotalTime),\r\n    P50Duration = percentile(TotalTime, 50),\r\n    P95Duration = percentile(TotalTime, 95),\r\n    P99Duration = percentile(TotalTime, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "size": 0,
+        "title": "Request Duration Percentiles",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "timechart",
+        "chartSettings": {
+          "yAxis": [
+            "AvgDuration",
+            "P50Duration", 
+            "P95Duration",
+            "P99Duration"
+          ],
+          "group": null,
+          "createOtherGroup": null,
+          "showLegend": true,
+          "yAxisAggregation": "Average",
+          "ySettings": {
+            "numberFormatSettings": {
+              "unit": 23,
+              "options": {
+                "style": "decimal",
+                "useGrouping": true
+              }
+            }
+          }
+        }
+      },
+      "name": "DurationChart"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Backend response time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(BackendTime)\r\n| summarize \r\n    AvgBackendTime = avg(BackendTime),\r\n    P95BackendTime = percentile(BackendTime, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "size": 0,
+        "title": "Backend Duration",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "timechart",
+        "chartSettings": {
+          "yAxis": [
+            "AvgBackendTime",
+            "P95BackendTime"
+          ],
+          "group": null,
+          "createOtherGroup": null,
+          "showLegend": true,
+          "yAxisAggregation": "Average",
+          "ySettings": {
+            "numberFormatSettings": {
+              "unit": 23,
+              "options": {
+                "style": "decimal",
+                "useGrouping": true
+              }
+            }
+          }
+        }
+      },
+      "name": "BackendDuration"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Error Analysis"
+      },
+      "name": "ErrorAnalysisHeader"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Error rates by response code from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ResponseCode, bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "size": 0,
+        "title": "Error Rates by Response Code",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "timechart",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {
+              "seriesName": "ResponseCode",
+              "label": "Response Code"
+            }
+          ],
+          "yAxis": [
+            "ErrorCount"
+          ],
+          "group": "ResponseCode",
+          "createOtherGroup": null,
+          "showLegend": true,
+          "yAxisAggregation": "Average",
+          "ySettings": {
+            "numberFormatSettings": {
+              "unit": 17,
+              "options": {
+                "style": "decimal",
+                "useGrouping": true
+              }
+            }
+          }
+        }
+      },
+      "name": "ErrorRatesByCode"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Top APIs by error count from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ApiId, ResponseCode\r\n| top 10 by ErrorCount desc",
+        "size": 0,
+        "title": "Top APIs by Error Count",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "ErrorCount",
+              "formatter": 3,
+              "formatOptions": {
+                "palette": "redBright"
+              }
+            }
+          ],
+          "sortBy": [
+            {
+              "itemKey": "ErrorCount",
+              "sortOrder": 2
+            }
+          ]
+        },
+        "sortBy": [
+          {
+            "itemKey": "ErrorCount",
+            "sortOrder": 2
+          }
+        ]
+      },
+      "name": "TopAPIsByErrors"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "## Capacity and Performance"
+      },
+      "name": "CapacityHeader"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "AzureMetrics\r\n| where MetricName == \"Capacity\"\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize AvgCapacity = avg(Average) by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "size": 0,
+        "title": "API Management Capacity Utilization",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "timechart",
+        "chartSettings": {
+          "yAxis": [
+            "AvgCapacity"
+          ],
+          "group": null,
+          "createOtherGroup": null,
+          "showLegend": true,
+          "yAxisAggregation": "Average",
+          "ySettings": {
+            "numberFormatSettings": {
+              "unit": 1,
+              "options": {
+                "style": "decimal",
+                "useGrouping": true,
+                "maximumFractionDigits": 2
+              }
+            },
+            "min": 0,
+            "max": 100
+          }
+        }
+      },
+      "name": "CapacityUtilization"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Top APIs by request volume from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize RequestCount = count() by ApiId\r\n| top 10 by RequestCount desc",
+        "size": 0,
+        "title": "Top APIs by Request Volume",
+        "timeContext": {
+          "durationMs": 0
+        },
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.operationalinsights/workspaces",
+        "crossComponentResources": [
+          "{LogAnalyticsWorkspace}"
+        ],
+        "visualization": "piechart",
+        "chartSettings": {
+          "showLegend": true,
+          "showDataLabels": true
+        }
+      },
+      "name": "TopAPIsByVolume"
+    }
+  ],
+  "isLocked": false,
+  "fallbackResourceIds": [
+    "Azure Monitor"
+  ],
+  "fromTemplateId": "sentinel-UserAndEntityBehaviorAnalytics",
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
+}
