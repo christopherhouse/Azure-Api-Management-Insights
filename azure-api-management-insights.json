@@ -57,6 +57,7 @@
             "name": "ApiManagementService",
             "type": 2,
             "isRequired": true,
+            "multiSelect": false,
             "query": "Resources\r\n| where type == 'microsoft.apimanagement/service'\r\n| where subscriptionId == '{Subscription:subscriptionId}'\r\n| project value = id, label = name, selected = false\r\n| sort by label asc",
             "crossComponentResources": [
               "{Subscription}"
