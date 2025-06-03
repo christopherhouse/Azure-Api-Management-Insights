@@ -241,7 +241,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Response time percentiles from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(DurationMs)\r\n| summarize \r\n    AvgDuration = avg(DurationMs),\r\n    P50Duration = percentile(DurationMs, 50),\r\n    P95Duration = percentile(DurationMs, 95),\r\n    P99Duration = percentile(DurationMs, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Response time percentiles from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(TotalTime)\r\n| summarize \r\n    AvgDuration = avg(TotalTime),\r\n    P50Duration = percentile(TotalTime, 50),\r\n    P95Duration = percentile(TotalTime, 95),\r\n    P99Duration = percentile(TotalTime, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Request Duration Percentiles",
         "timeContext": {
