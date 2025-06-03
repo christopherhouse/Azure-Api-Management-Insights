@@ -136,7 +136,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// API requests over time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// API requests over time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize TotalRequests = count() by bin(TimeGenerated, 5m), ApiId\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "API Requests Over Time",
         "timeContext": {
@@ -153,7 +153,7 @@
           "yAxis": [
             "TotalRequests"
           ],
-          "group": null,
+          "group": "ApiId",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -241,7 +241,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Response time percentiles from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(TotalTime)\r\n| summarize \r\n    AvgDuration = avg(TotalTime),\r\n    P50Duration = percentile(TotalTime, 50),\r\n    P95Duration = percentile(TotalTime, 95),\r\n    P99Duration = percentile(TotalTime, 99)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Response time percentiles from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(TotalTime)\r\n| summarize \r\n    AvgDuration = avg(TotalTime),\r\n    P50Duration = percentile(TotalTime, 50),\r\n    P95Duration = percentile(TotalTime, 95),\r\n    P99Duration = percentile(TotalTime, 99)\r\n    by bin(TimeGenerated, 5m), ApiId\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Request Duration Percentiles",
         "timeContext": {
@@ -261,7 +261,7 @@
             "P95Duration",
             "P99Duration"
           ],
-          "group": null,
+          "group": "ApiId",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -282,7 +282,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Backend response time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(BackendTime)\r\n| summarize \r\n    AvgBackendTime = avg(BackendTime),\r\n    P95BackendTime = percentile(BackendTime, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Backend response time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(BackendTime)\r\n| summarize \r\n    AvgBackendTime = avg(BackendTime),\r\n    P95BackendTime = percentile(BackendTime, 95)\r\n    by bin(TimeGenerated, 5m), ApiId\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Backend Duration",
         "timeContext": {
@@ -300,7 +300,7 @@
             "AvgBackendTime",
             "P95BackendTime"
           ],
-          "group": null,
+          "group": "ApiId",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -328,7 +328,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Error rates by response code from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ResponseCode, bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Error rates by response code from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where ResponseCode >= 400\r\n| summarize ErrorCount = count() by ResponseCode, ApiId, bin(TimeGenerated, 5m)\r\n| extend ApiResponseCode = strcat(ApiId, \" - \", ResponseCode)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Error Rates by Response Code",
         "timeContext": {
@@ -344,14 +344,14 @@
         "chartSettings": {
           "seriesLabelSettings": [
             {
-              "seriesName": "ResponseCode",
-              "label": "Response Code"
+              "seriesName": "ApiResponseCode",
+              "label": "API - Response Code"
             }
           ],
           "yAxis": [
             "ErrorCount"
           ],
-          "group": "ResponseCode",
+          "group": "ApiResponseCode",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
@@ -422,7 +422,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "AzureMetrics\r\n| where MetricName == \"Capacity\"\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize AvgCapacity = avg(Average) by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "AzureMetrics\r\n| where MetricName == \"Capacity\"\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| summarize AvgCapacity = avg(Average) by bin(TimeGenerated, 5m), Location\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "API Management Capacity Utilization",
         "timeContext": {
@@ -439,7 +439,7 @@
           "yAxis": [
             "AvgCapacity"
           ],
-          "group": null,
+          "group": "Location",
           "createOtherGroup": null,
           "showLegend": true,
           "yAxisAggregation": "Average",
