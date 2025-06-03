@@ -282,7 +282,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Backend response time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(BackendDurationMs)\r\n| summarize \r\n    AvgBackendTime = avg(BackendDurationMs),\r\n    P95BackendTime = percentile(BackendDurationMs, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
+        "query": "// Backend response time from resource-specific logs\r\nApiManagementGatewayLogs\r\n| where \"{ApiManagementService}\" == \"value::all\" or _ResourceId == \"{ApiManagementService}\"\r\n| where isnotnull(BackendTime)\r\n| summarize \r\n    AvgBackendTime = avg(BackendTime),\r\n    P95BackendTime = percentile(BackendTime, 95)\r\n    by bin(TimeGenerated, 5m)\r\n| sort by TimeGenerated asc",
         "size": 0,
         "title": "Backend Duration",
         "timeContext": {
